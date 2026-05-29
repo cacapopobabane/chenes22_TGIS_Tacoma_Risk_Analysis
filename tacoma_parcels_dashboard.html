@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tacoma Final Parcels — Land Use, Land Value & Soil Susceptibility</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --ink: #1A1F2E;
+    --ink2: #4B5568;
+    --muted: #9CA3AF;
+    --border: #E5E7EB;
+    --teal: #00A896;
+    --teal-light: #E6F7F5;
+    --sus1: #52B788;
+    --sus2: #F4A261;
+    --sus3: #E63946;
+    --sus1-light: #EAFAF1;
+    --sus2-light: #FEF3E8;
+    --sus3-light: #FDECEA;
+    --blue: #3B82F6;
+    --purple: #7C3AED;
+    --amber: #D97706;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1A1F2E 0%, #2D3748 100%);
+    padding: 36px 40px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 260px; height: 260px;
+    background: var(--teal);
+    opacity: 0.08;
+    border-radius: 50%;
+  }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 600;
+    color: #F9FAFB;
+    line-height: 1.2;
+    max-width: 600px;
+    margin-bottom: 8px;
+  }
+  .header-sub {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* FILTER TABS */
+  .filter-bar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .filter-tab {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink2);
+    padding: 14px 18px;
+    border-bottom: 2.5px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .filter-tab:hover { color: var(--teal); }
+  .filter-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+  /* MAIN GRID */
+  .main { padding: 28px 40px 48px; }
+
+  /* KPI ROW */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-accent {
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--ink2);
+  }
+
+  /* CHART GRID */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    font-family: 'Space Mono', monospace;
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  /* SUS BARS */
+  .sus-list { display: flex; flex-direction: column; gap: 14px; }
+  .sus-item {}
+  .sus-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .sus-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .sus-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; font-family: 'Space Mono', monospace;
+  }
+  .sus-meta { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .sus-count { font-size: 11px; color: var(--muted); }
+  .sus-avg { font-size: 11px; color: var(--ink2); font-family: 'Space Mono', monospace; }
+  .bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(.4,0,.2,1); }
+
+  /* HYPOTHESIS BOX */
+  .hyp-box {
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFFBF0 100%);
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .hyp-icon { font-size: 28px; flex-shrink: 0; }
+  .hyp-title { font-size: 13px; font-weight: 600; color: #92400E; margin-bottom: 4px; }
+  .hyp-text { font-size: 13px; color: #78350F; line-height: 1.5; }
+  .hyp-stat { display: flex; gap: 20px; margin-top: 12px; }
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 600; color: #92400E; font-family: 'Space Mono', monospace; display: block; }
+  .stat-label { font-size: 11px; color: #A16207; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { border-bottom: 1.5px solid var(--border); }
+  th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--ink); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #F9FAFB; }
+  .sus-pill {
+    font-size: 10px; font-weight: 600; padding: 3px 9px;
+    border-radius: 20px; display: inline-block;
+    font-family: 'Space Mono', monospace;
+  }
+  .p1 { background: var(--sus1-light); color: #166534; }
+  .p2 { background: var(--sus2-light); color: #92400E; }
+  .p3 { background: var(--sus3-light); color: #991B1B; }
+  .val-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .val-bar-bg { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .val-bar-inner { height: 100%; border-radius: 3px; background: var(--blue); }
+  .val-text { font-size: 12px; color: var(--ink2); font-family: 'Space Mono', monospace; white-space: nowrap; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 16px 40px 24px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    border-top: 1px solid var(--border);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .header, .main { padding: 20px; }
+    .filter-bar { padding: 0 20px; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-eyebrow">Tacoma, WA · GIS Risk Analysis · TGIS 415</div>
+  <h1>Tacoma Final Parcels Dashboard</h1>
+  <p class="header-sub">Land Use · Land Value · Soil Susceptibility · 91 Parcels</p>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <button class="filter-tab active" onclick="setFilter('all',this)">All Parcels (91)</button>
+  <button class="filter-tab" onclick="setFilter('sus1',this)">Sus 1 — Low (1)</button>
+  <button class="filter-tab" onclick="setFilter('sus2',this)">Sus 2 — Moderate (13)</button>
+  <button class="filter-tab" onclick="setFilter('sus3',this)">Sus 3 — High (77)</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--teal)"></div>
+      <div class="kpi-label">Total Parcels</div>
+      <div class="kpi-value" id="kpi-total">91</div>
+      <div class="kpi-sub">High susceptibility & floodplain zone</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--sus3)"></div>
+      <div class="kpi-label">In Sus 3 (High Risk)</div>
+      <div class="kpi-value" id="kpi-sus3">77</div>
+      <div class="kpi-sub" id="kpi-sus3-pct">85% of all parcels</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--blue)"></div>
+      <div class="kpi-label">Mean Land Value</div>
+      <div class="kpi-value" id="kpi-mean">$541K</div>
+      <div class="kpi-sub" id="kpi-mean-sub">Across filtered parcels</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--purple)"></div>
+      <div class="kpi-label">Land Use Categories</div>
+      <div class="kpi-value" id="kpi-cats">8</div>
+      <div class="kpi-sub">Parks 37% · Services 31%</div>
+    </div>
+  </div>
+
+  <!-- HYPOTHESIS CALLOUT -->
+  <div class="hyp-box">
+    <div class="hyp-icon">📊</div>
+    <div style="flex:1;">
+      <div class="hyp-title">Key Statistical Finding — Hypothesis Rejected (p &lt; 0.001)</div>
+      <div class="hyp-text">Higher-value properties are <strong>more</strong> concentrated in high-risk zones than lower-value properties — the opposite of the environmental justice hypothesis. High-amenity waterfront terrain in North Tacoma commands premium prices <em>and</em> sits on the city's most susceptible slopes.</div>
+      <div class="hyp-stat">
+        <div class="stat-item"><span class="stat-val">26%</span><span class="stat-label">Q1 parcels in Sus 3</span></div>
+        <div class="stat-item"><span class="stat-val">83%</span><span class="stat-label">Q4 parcels in Sus 3</span></div>
+        <div class="stat-item"><span class="stat-val">301.36</span><span class="stat-label">Chi-square statistic</span></div>
+        <div class="stat-item"><span class="stat-val">&lt;0.001</span><span class="stat-label">p-value</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-title">Mean Land Value by Land Use Category</div>
+      <div class="card-sub">All Sus classes · ordered by value</div>
+      <div class="chart-wrap" style="height:240px;">
+        <canvas id="catValChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Susceptibility Distribution by Land Use</div>
+      <div class="card-sub">Stacked count · Sus 1 / 2 / 3</div>
+      <div class="chart-wrap" style="height:240px;">
+        <canvas id="susStackChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="chart-grid-3">
+    <div class="card">
+      <div class="card-title">Soil Susceptibility Breakdown</div>
+      <div class="card-sub">Count & avg land value per class</div>
+      <div class="sus-list" style="margin-top:4px;">
+        <div class="sus-item">
+          <div class="sus-header">
+            <span class="sus-name">Sus 1 — Low</span>
+            <span class="sus-badge" style="background:var(--sus1-light);color:#166534;">1 parcel</span>
+          </div>
+          <div class="sus-meta"><span class="sus-count">Park land only</span><span class="sus-avg">avg $13,900</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:1.1%;background:var(--sus1);"></div></div>
+        </div>
+        <div class="sus-item">
+          <div class="sus-header">
+            <span class="sus-name">Sus 2 — Moderate</span>
+            <span class="sus-badge" style="background:var(--sus2-light);color:#92400E;">13 parcels</span>
+          </div>
+          <div class="sus-meta"><span class="sus-count">12 Parks · 1 Utility</span><span class="sus-avg">avg $30,531</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:14.3%;background:var(--sus2);"></div></div>
+        </div>
+        <div class="sus-item">
+          <div class="sus-header">
+            <span class="sus-name">Sus 3 — High</span>
+            <span class="sus-badge" style="background:var(--sus3-light);color:#991B1B;">77 parcels</span>
+          </div>
+          <div class="sus-meta"><span class="sus-count">All categories</span><span class="sus-avg">avg $597,353</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--sus3);"></div></div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--ink2);line-height:1.5;">Sus 3 parcels have a mean land value <strong>19.6×</strong> higher than Sus 1 & 2 combined — driven by high-amenity waterfront terrain in North Tacoma.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Parcel Count by Category</div>
+      <div class="card-sub">All 91 parcels</div>
+      <div class="chart-wrap" style="height:220px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Q1 vs Q4 in High Risk</div>
+      <div class="card-sub">Bottom 25% vs Top 25% by land value</div>
+      <div class="chart-wrap" style="height:220px;">
+        <canvas id="quartileChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARCEL TABLE -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div>
+        <div class="card-title">All Parcels — Land Use, Value & Susceptibility</div>
+        <div class="card-sub">Showing <span id="table-count">8</span> categories · click filter tabs above to narrow</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);">Sort by:</span>
+        <select id="sortSelect" onchange="renderTable()" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;color:var(--ink);">
+          <option value="mean_desc">Value ↓</option>
+          <option value="mean_asc">Value ↑</option>
+          <option value="count_desc">Count ↓</option>
+          <option value="sus_desc">Sus High First</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Land Use Category</th>
+            <th>Count</th>
+            <th>Sus Class</th>
+            <th>Mean Land Value</th>
+            <th>Max Land Value</th>
+            <th>Value Range</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Esther Chen · TGIS 415 · University of Washington · Data: Pierce County GIS Open Data · WA DNR Geological Information Portal
+</div>
+
+<script>
+const RAW = [
+  { cat:'Schools',          count:2,  sus:'3', mean:1405600, max:1897200, s1:0,s2:0,s3:2  },
+  { cat:'Auto Parking',     count:7,  sus:'3', mean:751029,  max:1897200, s1:0,s2:0,s3:7  },
+  { cat:'Park',             count:34, sus:'mix',mean:620871, max:18904800,s1:1,s2:12,s3:21 },
+  { cat:'Utilities',        count:7,  sus:'mix',mean:474200, max:1854300, s1:0,s2:1,s3:6  },
+  { cat:'Office Space',     count:5,  sus:'3', mean:421620,  max:1202500, s1:0,s2:0,s3:5  },
+  { cat:'Services',         count:28, sus:'3', mean:389118,  max:2024400, s1:0,s2:0,s3:28 },
+  { cat:'Vacant Industrial',count:5,  sus:'3', mean:177280,  max:283500,  s1:0,s2:0,s3:5  },
+  { cat:'Transit ROW',      count:3,  sus:'3', mean:6600,    max:7900,    s1:0,s2:0,s3:3  },
+];
+
+let currentFilter = 'all';
+
+function fmt(v) {
+  if (v >= 1000000) return '$' + (v/1000000).toFixed(2).replace(/\.?0+$/,'') + 'M';
+  if (v >= 1000) return '$' + Math.round(v/1000) + 'K';
+  return '$' + v.toLocaleString();
+}
+
+function susLabel(s) {
+  if (s === '1') return '<span class="sus-pill p1">Sus 1 Low</span>';
+  if (s === '2') return '<span class="sus-pill p2">Sus 2 Mod</span>';
+  if (s === '3') return '<span class="sus-pill p3">Sus 3 High</span>';
+  return '<span class="sus-pill p3">Sus 3 High</span><span class="sus-pill p2" style="margin-left:3px;">Sus 2</span>';
+}
+
+function filteredData() {
+  if (currentFilter === 'all') return RAW;
+  if (currentFilter === 'sus1') return RAW.filter(r => r.s1 > 0).map(r => ({...r, count:r.s1, mean:13900, max:13900}));
+  if (currentFilter === 'sus2') return RAW.filter(r => r.s2 > 0).map(r => ({...r, count:r.s2, mean:r.cat==='Park'?17500:8600, max:r.cat==='Park'?322100:8600}));
+  if (currentFilter === 'sus3') return RAW.filter(r => r.s3 > 0).map(r => ({...r, count:r.s3}));
+  return RAW;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateKPIs();
+  renderTable();
+  updateCharts();
+}
+
+function updateKPIs() {
+  const data = filteredData();
+  const total = data.reduce((a,r) => a + r.count, 0);
+  const sus3count = data.reduce((a,r) => a + r.s3, 0);
+  const allVals = data.map(r => r.mean * r.count);
+  const totalVals = data.reduce((a,r) => a + r.count, 0);
+  const meanVal = totalVals > 0 ? allVals.reduce((a,b)=>a+b,0)/totalVals : 0;
+  const catCount = data.filter(r => r.count > 0).length;
+
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-sus3').textContent = sus3count;
+  document.getElementById('kpi-sus3-pct').textContent = total > 0 ? Math.round(sus3count/total*100) + '% of filtered parcels' : '—';
+  document.getElementById('kpi-mean').textContent = fmt(Math.round(meanVal));
+  document.getElementById('kpi-cats').textContent = catCount;
+}
+
+function renderTable() {
+  let data = filteredData().filter(r => r.count > 0);
+  const sort = document.getElementById('sortSelect').value;
+  if (sort === 'mean_desc') data.sort((a,b) => b.mean - a.mean);
+  if (sort === 'mean_asc') data.sort((a,b) => a.mean - b.mean);
+  if (sort === 'count_desc') data.sort((a,b) => b.count - a.count);
+  if (sort === 'sus_desc') data.sort((a,b) => b.s3 - a.s3);
+
+  const maxVal = Math.max(...data.map(r => r.mean));
+  document.getElementById('table-count').textContent = data.length;
+
+  document.getElementById('tableBody').innerHTML = data.map(r => `
+    <tr>
+      <td style="font-weight:500;">${r.cat}</td>
+      <td>${r.count}</td>
+      <td>${susLabel(r.sus)}</td>
+      <td>
+        <div class="val-bar-wrap">
+          <div class="val-bar-bg"><div class="val-bar-inner" style="width:${Math.round(r.mean/maxVal*100)}%"></div></div>
+          <span class="val-text">${fmt(r.mean)}</span>
+        </div>
+      </td>
+      <td class="val-text">${fmt(r.max)}</td>
+      <td>
+        <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">
+          ${r.s1>0?r.s1+' low · ':''}${r.s2>0?r.s2+' mod · ':''}${r.s3>0?r.s3+' high':''}
+        </span>
+      </td>
+    </tr>`).join('');
+}
+
+// CHARTS
+let catValChart, susStackChart, donutChart, quartileChart;
+
+function buildCharts() {
+  const catLabels = ['Schools','Auto Parking','Park','Utilities','Office','Services','Vacant Ind.','Transit ROW'];
+  const catVals   = [1405600, 751029, 620871, 474200, 421620, 389118, 177280, 6600];
+  const catColors = ['#7C3AED','#D97706','#059669','#0891B2','#2563EB','#DB2777','#65A30D','#9CA3AF'];
+
+  catValChart = new Chart(document.getElementById('catValChart'), {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [{ data: catVals, backgroundColor: catColors, borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
+      scales: {
+        x: { ticks: { callback: v => fmt(v), font: { size: 10 } }, grid: { color: '#F3F4F6' } },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  susStackChart = new Chart(document.getElementById('susStackChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Parks','Services','Auto Park','Utilities','Office','Schools','Vacant Ind.','Transit'],
+      datasets: [
+        { label: 'Sus 1 Low',  data:[1,0,0,0,0,0,0,0], backgroundColor:'#52B788', borderRadius:3 },
+        { label: 'Sus 2 Mod',  data:[12,0,0,1,0,0,0,0], backgroundColor:'#F4A261', borderRadius:3 },
+        { label: 'Sus 3 High', data:[21,28,7,6,5,2,5,3], backgroundColor:'#E63946', borderRadius:3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } } },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 30 }, grid: { display: false } },
+        y: { stacked: true, ticks: { font: { size: 10 } }, grid: { color: '#F3F4F6' } }
+      }
+    }
+  });
+
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Parks (34)','Services (28)','Auto Parking (7)','Utilities (7)','Office (5)','Vacant Ind. (5)','Transit (3)','Schools (2)'],
+      datasets: [{ data:[34,28,7,7,5,5,3,2],
+        backgroundColor:['#059669','#DB2777','#D97706','#0891B2','#2563EB','#65A30D','#9CA3AF','#7C3AED'],
+        borderWidth:2, borderColor:'#fff', hoverOffset:6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { position:'bottom', labels:{ font:{size:10}, boxWidth:10, padding:6 } } }
+    }
+  });
+
+  quartileChart = new Chart(document.getElementById('quartileChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Q1 (≤$6,100)', 'Q4 (≥$332,900)'],
+      datasets: [
+        { label: 'In Sus 3 (High Risk)', data:[17,24], backgroundColor:['#E63946CC','#E63946'], borderRadius:5 },
+        { label: 'Not High Risk', data:[6,0], backgroundColor:['#D1D5DBCC','#D1D5DB'], borderRadius:5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'bottom', labels:{ font:{size:11}, boxWidth:12 } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} parcels` } } },
+      scales: {
+        x: { stacked: true, ticks:{ font:{size:11} }, grid:{ display:false } },
+        y: { stacked: true, ticks:{ font:{size:10} }, grid:{ color:'#F3F4F6' } }
+      }
+    }
+  });
+}
+
+function updateCharts() {
+  // Charts stay static for story map context — filter only affects KPIs and table
+}
+
+// INIT
+buildCharts();
+updateKPIs();
+renderTable();
+</script>
+</body>
+</html>
